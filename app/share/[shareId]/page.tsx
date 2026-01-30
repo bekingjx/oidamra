@@ -47,8 +47,15 @@ export default async function ShareOutfitPage({
           </div>
         ) : (
           items.map((item) => {
-            const garment = item.garments;
-            const photo = garment ? getPrimaryPhoto(garment.garment_photos ?? []) : "";
+            const garments = Array.isArray(item.garments)
+              ? item.garments
+              : item.garments
+                ? [item.garments]
+                : [];
+            const garment = garments[0];
+            const photo = garment
+              ? getPrimaryPhoto(garment.garment_photos ?? [])
+              : "";
             return (
               <div
                 key={item.id}
