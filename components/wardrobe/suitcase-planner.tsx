@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Backpack } from "lucide-react";
@@ -11,6 +11,8 @@ import {
   CATEGORIES,
   COLORS,
   SEASONS,
+  SLOT_LABELS,
+  WardrobeSlot,
   categoryToSlot,
 } from "@/lib/wardrobe/constants";
 import { Garment } from "@/lib/wardrobe/types";
@@ -36,6 +38,7 @@ export default function SuitcasePlanner({
       : DEFAULT_DAYS
   );
   const [query, setQuery] = useState("");
+  const [filterSlot, setFilterSlot] = useState<WardrobeSlot | "tutte">("tutte");
   const [filterColor, setFilterColor] = useState("tutti");
   const [filterSeason, setFilterSeason] = useState("tutte");
   const [filterCategory, setFilterCategory] = useState("tutte");
@@ -53,9 +56,35 @@ export default function SuitcasePlanner({
     const used = new Set(garments.map((garment) => garment.category));
     return CATEGORIES.filter((item) => used.has(item.value));
   }, [garments]);
+  const availableSlots = useMemo(() => {
+    const used = new Set(garments.map((garment) => categoryToSlot(garment.category)));
+    return Object.entries(SLOT_LABELS).filter(([slot]) =>
+      used.has(slot as WardrobeSlot)
+    );
+  }, [garments]);
+  const availableCategoriesBySlot = useMemo(() => {
+    if (filterSlot === "tutte") return availableCategories;
+    return availableCategories.filter((item) => item.slot === filterSlot);
+  }, [availableCategories, filterSlot]);
+
+  useEffect(() => {
+    if (filterCategory === "tutte") return;
+    if (filterSlot === "tutte") return;
+    const stillValid = availableCategoriesBySlot.some(
+      (item) => item.value === filterCategory
+    );
+    if (!stillValid) {
+      setFilterCategory("tutte");
+    }
+  }, [availableCategoriesBySlot, filterCategory, filterSlot]);
 
   const filteredGarments = useMemo(() => {
     let list = garments;
+    if (filterSlot !== "tutte") {
+      list = list.filter(
+        (garment) => categoryToSlot(garment.category) === filterSlot
+      );
+    }
     if (filterColor !== "tutti") {
       list = list.filter((garment) => garment.color === filterColor);
     }
@@ -78,7 +107,7 @@ export default function SuitcasePlanner({
       );
     }
     return list;
-  }, [garments, filterCategory, filterColor, filterSeason, query]);
+  }, [garments, filterCategory, filterColor, filterSeason, filterSlot, query]);
 
   const selectedGarments = useMemo(() => {
     return garments
@@ -338,6 +367,24 @@ export default function SuitcasePlanner({
                 </select>
               </div>
               <div className="grid gap-1">
+                <Label htmlFor="filterSlot">Parte</Label>
+                <select
+                  id="filterSlot"
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={filterSlot}
+                  onChange={(event) =>
+                    setFilterSlot(event.target.value as WardrobeSlot | "tutte")
+                  }
+                >
+                  <option value="tutte">Tutte le parti</option>
+                  {availableSlots.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-1">
                 <Label htmlFor="filterSeason">Stagione</Label>
                 <select
                   id="filterSeason"
@@ -362,7 +409,7 @@ export default function SuitcasePlanner({
                   onChange={(event) => setFilterCategory(event.target.value)}
                 >
                   <option value="tutte">Tutte le categorie</option>
-                  {availableCategories.map((item) => (
+                  {availableCategoriesBySlot.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>

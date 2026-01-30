@@ -91,6 +91,7 @@ export default function WardrobeDashboard({
   const [garments, setGarments] = useState<Garment[]>(initialGarments);
   const [outfits, setOutfits] = useState<Outfit[]>(initialOutfits);
   const [name, setName] = useState("");
+  const [slot, setSlot] = useState<WardrobeSlot>(CATEGORIES[0]?.slot ?? "top");
   const [category, setCategory] = useState(CATEGORIES[0]?.value ?? "");
   const [color, setColor] = useState(COLORS[0]?.value ?? "");
   const [seasons, setSeasons] = useState<string[]>([]);
@@ -280,6 +281,10 @@ export default function WardrobeDashboard({
     );
     return COLORS.filter((item) => used.has(item.value));
   }, [selectableGarments]);
+  const categoriesBySlot = useMemo(
+    () => CATEGORIES.filter((item) => item.slot === slot),
+    [slot]
+  );
   const selectedForecast = useMemo(() => {
     if (!forecastDays.length) return null;
     return (
@@ -482,6 +487,12 @@ export default function WardrobeDashboard({
     );
   };
 
+  const handleSlotChange = (value: WardrobeSlot) => {
+    setSlot(value);
+    const nextCategory = CATEGORIES.find((item) => item.slot === value)?.value ?? "";
+    setCategory(nextCategory);
+  };
+
   const handleOpenSuitcase = () => {
     const days = Math.max(1, Number.parseInt(tripDays, 10) || 1);
     const params = new URLSearchParams();
@@ -560,7 +571,7 @@ export default function WardrobeDashboard({
     event.preventDefault();
     if (!category || !color) {
       setStatus(null);
-      setError("Seleziona categoria e colore.");
+      setError("Seleziona parte, categoria e colore.");
       return;
     }
     if (files.length === 0) {
@@ -1322,6 +1333,23 @@ export default function WardrobeDashboard({
                   />
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="slot">Parte</Label>
+                  <select
+                    id="slot"
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={slot}
+                    onChange={(event) =>
+                      handleSlotChange(event.target.value as WardrobeSlot)
+                    }
+                  >
+                    {Object.entries(SLOT_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="category">Categoria</Label>
                   <select
                     id="category"
@@ -1329,7 +1357,7 @@ export default function WardrobeDashboard({
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
                   >
-                    {CATEGORIES.map((item) => (
+                    {categoriesBySlot.map((item) => (
                       <option key={item.value} value={item.value}>
                         {item.label}
                       </option>
